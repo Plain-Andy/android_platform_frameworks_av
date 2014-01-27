@@ -2425,13 +2425,6 @@ if (mType == MIXER) {
             for (size_t i = 0; i < effectChains.size(); i ++) {
                 effectChains[i]->process_l();
             }
-#ifdef SRS_PROCESSING
-            // Offload thread
-            if (mType == OFFLOAD) {
-                char buffer[2];
-                POSTPRO_PATCH_OUTPROC_DIRECT_SAMPLES(this, AUDIO_FORMAT_PCM_16_BIT, (int16_t *) buffer, 2, 48000, 2);
-            }
-#endif
         }
 
         // enable changes in effect chain
@@ -4582,10 +4575,6 @@ bool AudioFlinger::RecordThread::threadLoop()
         acquireWakeLock_l(activeTrack != 0 ? activeTrack->uid() : -1);
     }
 
-#ifdef SRS_PROCESSING
-    POSTPRO_PATCH_INPROC_INIT(this, gettid(), mFormat);
-#endif
-
     // used to verify we've read at least once before evaluating how many bytes were read
     bool readOnce = false;
 
@@ -4730,9 +4719,6 @@ bool AudioFlinger::RecordThread::threadLoop()
 #else
                                     mBufferSize);
 #endif
-#ifdef SRS_PROCESSING
-                            POSTPRO_PATCH_INPROC_SAMPLES(this, mFormat, readInto, mBytesRead, mSampleRate, mChannelCount);
-#endif
                             if (mBytesRead <= 0) {
                                 if ((mBytesRead < 0) && (mActiveTrack->mState == TrackBase::ACTIVE))
                                 {
@@ -4833,10 +4819,6 @@ bool AudioFlinger::RecordThread::threadLoop()
         mActiveTrack.clear();
         mStartStopCond.broadcast();
     }
-
-#ifdef SRS_PROCESSING
-    POSTPRO_PATCH_INPROC_EXIT(this, gettid(), mFormat);
-#endif
 
     releaseWakeLock();
 
@@ -5220,9 +5202,6 @@ status_t AudioFlinger::RecordThread::getNextBuffer(AudioBufferProvider::Buffer* 
     if (framesReady == 0) {
         mBytesRead = mInput->stream->read(mInput->stream, mRsmpInBuffer, mBufferSize);
 
-#ifdef SRS_PROCESSING
-        POSTPRO_PATCH_INPROC_SAMPLES(this, mFormat, mRsmpInBuffer, mBytesRead, mSampleRate, mChannelCount);
-#endif
         if (mBytesRead <= 0) {
             if ((mBytesRead < 0) && (mActiveTrack->mState == TrackBase::ACTIVE)) {
                 ALOGE("RecordThread::getNextBuffer() Error reading audio input");
@@ -5273,9 +5252,6 @@ bool AudioFlinger::RecordThread::checkForNewParameters_l()
         uint32_t reqSamplingRate = mReqSampleRate;
         uint32_t reqChannelCount = mReqChannelCount;
 
-#ifdef SRS_PROCESSING
-        POSTPRO_PATCH_INPROC_ROUTE(this, param, value);
-#endif
         if (param.getInt(String8(AudioParameter::keySamplingRate), value) == NO_ERROR) {
             reqSamplingRate = value;
             reconfig = true;
